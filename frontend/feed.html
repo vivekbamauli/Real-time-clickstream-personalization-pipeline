@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Personalized Feed Demo</title>
+  <style>
+    body { font-family: Arial; max-width: 600px; margin: 20px auto; }
+    .card { border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 8px; }
+    .title { font-weight: bold; }
+    button { padding: 6px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<h2>Your Personalized Feed</h2>
+<div id="feed"></div>
+
+<script>
+(function() {
+  // Simple user id
+  if (!localStorage.getItem("user_id")) {
+    localStorage.setItem("user_id", "user_" + Math.random().toString(36).substr(2, 9));
+  }
+  const USER_ID = localStorage.getItem("user_id");
+
+  async function loadFeed() {
+    const res = await fetch(`http://localhost:8000/feed?user_id=${USER_ID}`);
+    const data = await res.json();
+    const container = document.getElementById("feed");
+    container.innerHTML = "";
+
+    data.feed.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="title">${item.title}</div>
+        <div>Category: ${item.category}</div>
+        <div>Likes: ${item.like_count}</div>
+        <button data-id="${item.content_id}" data-category="${item.category}">Like </button>
+      `;
+      container.appendChild(card);
+    });
+
+    // attach like handlers
+    document.querySelectorAll("button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const contentId = btn.getAttribute("data-id");
+        const category = btn.getAttribute("data-category");
+        likeContent(contentId, category);
+      });
+    });
+  }
+
+  async function likeContent(contentId, category) {
+    await fetch("http://localhost:8000/track", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        user_id: USER_ID,
+        event: "like",
+        content_id: contentId,
+        category: category,
+        timestamp: new Date().toISOString()
+      })
+    });
+    alert("Liked! Next refresh will be more like this ");
+  }
+
+  loadFeed();
+})();
+</script>
+
+</body>
+</html>
